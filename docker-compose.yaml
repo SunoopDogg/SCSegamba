@@ -1,0 +1,21 @@
+name: scsegamba
+
+services:
+  python:
+    build: .
+    container_name: scsegamba
+    tty: true
+    ipc: host
+    environment:
+      - DISPLAY=${DISPLAY}
+      - QT_X11_NO_MITSHM=1
+    volumes:
+      - .:/root/scsegamba
+      - /tmp/.X11-unix:/tmp/.X11-unix
+    deploy:
+      resources:
+        reservations:
+          devices:
+            - driver: nvidia
+              count: all
+              capabilities: [gpu]
