@@ -4,24 +4,24 @@ Github: https://github.com/Karl1109
 Email: liuhui@ieee.org
 '''
 
+from mmengine.optim.scheduler.lr_scheduler import PolyLR
+from tqdm import tqdm
+from util.logger import get_logger
+from eval.evaluate import eval
+import cv2
+from datasets import create_dataset
+from models import build_model
+from engine import train_one_epoch
+import util.misc as utils
+import torch
+import numpy as np
+from pathlib import Path
+import time
+import random
+import datetime
+import argparse
 import os
 os.environ['CUDA_VISIBLE_DEVICES'] = '0'
-import argparse
-import datetime
-import random
-import time
-from pathlib import Path
-import numpy as np
-import torch
-import util.misc as utils
-from engine import train_one_epoch
-from models import build_model
-from datasets import create_dataset
-import cv2
-from eval.evaluate import eval
-from util.logger import get_logger
-from tqdm import tqdm
-from mmengine.optim.scheduler.lr_scheduler import PolyLR
 
 
 def get_args_parser():
@@ -75,11 +75,13 @@ def get_args_parser():
                         help='Input image height for preprocessing (will be resized)')
     return parser
 
+
 def main(args):
     checkpoints_path = "./checkpoints"
     cur_time = time.strftime('%Y_%m_%d_%H:%M:%S', time.localtime(time.time()))
     dataset_name = (args.dataset_path).split('/')[-1]
-    process_folder_path = os.path.join(checkpoints_path, cur_time + '_Dataset->' + dataset_name)
+    process_folder_path = os.path.join(
+        checkpoints_path, cur_time + '_Dataset->' + dataset_name)
     args.phase = 'train'
     if not os.path.exists(process_folder_path):
         os.makedirs(process_folder_path)
@@ -130,9 +132,11 @@ def main(args):
     if args.lr_scheduler == 'StepLR':
         lr_scheduler = torch.optim.lr_scheduler.StepLR(optimizer, args.lr_drop)
     elif args.lr_scheduler == 'CosLR':
-        lr_scheduler = torch.optim.lr_scheduler.CosineAnnealingWarmRestarts(optimizer, T_0=30, T_mult=2, eta_min=1e-5)
+        lr_scheduler = torch.optim.lr_scheduler.CosineAnnealingWarmRestarts(
+            optimizer, T_0=30, T_mult=2, eta_min=1e-5)
     elif args.lr_scheduler == 'PolyLR':
-        lr_scheduler = PolyLR(optimizer, eta_min=args.min_lr, begin=args.start_epoch, end=args.epochs)
+        lr_scheduler = PolyLR(optimizer, eta_min=args.min_lr,
+                              begin=args.start_epoch, end=args.epochs)
     else:
         raise ValueError(f"Unsupported lr_scheduler: {args.lr_scheduler}")
     output_dir = args.output_dir + '/' + cur_time + '_Dataset->' + dataset_name
@@ -143,12 +147,14 @@ def main(args):
     log_train.info("Start processing! ")
     start_time = time.time()
     max_mIoU = 0
-    max_Metrics = {'epoch': 0, 'mIoU': 0, 'ODS': 0, 'OIS': 0, 'F1': 0, 'Precision': 0, 'Recall': 0}
+    max_Metrics = {'epoch': 0, 'mIoU': 0, 'ODS': 0,
+                   'OIS': 0, 'F1': 0, 'Precision': 0, 'Recall': 0}
 
     for epoch in range(args.start_epoch, args.epochs):
         print("---------------------------------------------------------------------------------------")
         print("training epoch start -> ", epoch)
-        train_one_epoch(model, criterion, train_dataLoader, optimizer, epoch, args, log_train)
+        train_one_epoch(model, criterion, train_dataLoader,
+                        optimizer, epoch, args, log_train)
         lr_scheduler.step()
         if args.output_dir:
             checkpoint_paths = [output_dir / 'checkpoint.pth']
@@ -194,27 +200,34 @@ def main(args):
                 # out[out >= 0.5] = 255
                 # out[out < 0.5] = 0
 
-                log_test.info('----------------------------------------------------------------------------------------------')
+                log_test.info(
+                    '----------------------------------------------------------------------------------------------')
                 log_test.info("loss -> " + str(loss))
-                log_test.info(str(os.path.join(save_root, "{}_lab.png".format(root_name))))
-                log_test.info(str(os.path.join(save_root, "{}_pre.png".format(root_name))))
-                log_test.info('----------------------------------------------------------------------------------------------')
-                cv2.imwrite(os.path.join(save_root, "{}_lab.png".format(root_name)), target)
-                cv2.imwrite(os.path.join(save_root, "{}_pre.png".format(root_name)), out)
+                log_test.info(
+                    str(os.path.join(save_root, "{}_lab.png".format(root_name))))
+                log_test.info(
+                    str(os.path.join(save_root, "{}_pre.png".format(root_name))))
+                log_test.info(
+                    '----------------------------------------------------------------------------------------------')
+                cv2.imwrite(os.path.join(
+                    save_root, "{}_lab.png".format(root_name)), target)
+                cv2.imwrite(os.path.join(
+                    save_root, "{}_pre.png".format(root_name)), out)
                 pbar.set_description(f"Loss: {loss.item():.4f}")
                 pbar.update(1)
         pbar.close()
 
         log_test.info("model -> " + str(epoch) + " test finish!")
-        log_test.info('----------------------------------------------------------------------------------------------')
+        log_test.info(
+            '----------------------------------------------------------------------------------------------')
         print("testing epoch finish -> ", epoch)
         print("---------------------------------------------------------------------------------------")
 
-        print("evalauting epoch start -> ", epoch)
+        print("evaluating epoch start -> ", epoch)
         metrics = eval(log_eval, save_root, epoch)
         for key, value in metrics.items():
             print(str(key) + ' -> ' + str(value))
-        if(max_mIoU < metrics['mIoU']):
+        if (max_mIoU < metrics['mIoU']):
             max_Metrics = metrics
             max_mIoU = metrics['mIoU']
             checkpoint_paths = [output_dir / f'checkpoint_best.pth']
@@ -229,17 +242,21 @@ def main(args):
             log_train.info("\nupdate and save best model -> " + str(epoch))
             print("\nupdate and save best model -> ", epoch)
 
-        print("evalauting epoch finish -> ", epoch)
-        print('\nmax_mIoU -> ' + str(max_Metrics['mIoU']) + '\nmax Epoch -> ' + str(max_Metrics['epoch']))
+        print("evaluating epoch finish -> ", epoch)
+        print('\nmax_mIoU -> ' +
+              str(max_Metrics['mIoU']) + '\nmax Epoch -> ' + str(max_Metrics['epoch']))
         print("---------------------------------------------------------------------------------------")
 
-        log_eval.info("evalauting epoch finish -> " + str(epoch))
-        log_eval.info('\nmax_mIoU -> ' + str(max_Metrics['mIoU']) + '\nmax Epoch -> ' + str(max_Metrics['epoch']))
-        log_eval.info("---------------------------------------------------------------------------------------")
+        log_eval.info("evaluating epoch finish -> " + str(epoch))
+        log_eval.info(
+            '\nmax_mIoU -> ' + str(max_Metrics['mIoU']) + '\nmax Epoch -> ' + str(max_Metrics['epoch']))
+        log_eval.info(
+            "---------------------------------------------------------------------------------------")
 
     for key, value in max_Metrics.items():
         log_eval.info(str(key) + ' -> ' + str(value))
-    log_eval.info('\nmax_mIoU -> ' + str(max_Metrics['mIoU']) + '\nmax Epoch -> ' + str(max_Metrics['epoch']))
+    log_eval.info('\nmax_mIoU -> ' +
+                  str(max_Metrics['mIoU']) + '\nmax Epoch -> ' + str(max_Metrics['epoch']))
 
     total_time = time.time() - start_time
     total_time_str = str(datetime.timedelta(seconds=int(total_time)))
@@ -248,6 +265,7 @@ def main(args):
 
 
 if __name__ == '__main__':
-    parser = argparse.ArgumentParser('SCSEGAMBA FOR CRACK', parents=[get_args_parser()])
+    parser = argparse.ArgumentParser(
+        'SCSEGAMBA FOR CRACK', parents=[get_args_parser()])
     args = parser.parse_args()
     main(args)

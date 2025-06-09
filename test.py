@@ -13,7 +13,8 @@ from datasets import create_dataset
 from models import build_model
 from main import get_args_parser
 
-parser = argparse.ArgumentParser('SCSEGAMBA FOR CRACK', parents=[get_args_parser()])
+parser = argparse.ArgumentParser(
+    'SCSEGAMBA FOR CRACK', parents=[get_args_parser()])
 args = parser.parse_args()
 args.phase = 'test'
 args.dataset_path = '../data/TUT'
@@ -52,11 +53,25 @@ if __name__ == '__main__':
             # out[out >= 0.5] = 255
             # out[out < 0.5] = 0
 
-            print('----------------------------------------------------------------------------------------------')
+            print(
+                '----------------------------------------------------------------------------------------------')
             print(os.path.join(save_root, "{}_lab.png".format(root_name)))
             print(os.path.join(save_root, "{}_pre.png".format(root_name)))
-            print('----------------------------------------------------------------------------------------------')
-            cv2.imwrite(os.path.join(save_root, "{}_lab.png".format(root_name)), target)
-            cv2.imwrite(os.path.join(save_root, "{}_pre.png".format(root_name)), out)
+            print(
+                '----------------------------------------------------------------------------------------------')
+            cv2.imwrite(os.path.join(
+                save_root, "{}_lab.png".format(root_name)), target)
+            cv2.imwrite(os.path.join(
+                save_root, "{}_pre.png".format(root_name)), out)
+
+            """Editor: SunoopDogg"""
+            original = cv2.imread(data["A_paths"][0])
+            cv2.imshow("original", original)
+            cv2.imshow("target", target)
+            cv2.imshow("out", out)
+
+            cv2.waitKey(0)
+            cv2.destroyAllWindows()
+            """"""
 
     print("Finished!")
