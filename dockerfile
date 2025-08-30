@@ -17,4 +17,32 @@ ENV PYTHON_GET_PIP_URL=https://github.com/pypa/get-pip/raw/0d8570dc44796f4369b65
 ENV PYTHON_GET_PIP_SHA256=96461deced5c2a487ddc65207ec5a9cffeca0d34e7af7ea1afc470ff0d746207
 RUN set -eux; 		savedAptMark="$(apt-mark showmanual)"; 	apt-get update; 	apt-get install -y --no-install-recommends wget; 		wget -O get-pip.py "$PYTHON_GET_PIP_URL"; 	echo "$PYTHON_GET_PIP_SHA256 *get-pip.py" | sha256sum -c -; 		apt-mark auto '.*' > /dev/null; 	[ -z "$savedAptMark" ] || apt-mark manual $savedAptMark > /dev/null; 	apt-get purge -y --auto-remove -o APT::AutoRemove::RecommendsImportant=false; 	rm -rf /var/lib/apt/lists/*; 		export PYTHONDONTWRITEBYTECODE=1; 		python get-pip.py 		--disable-pip-version-check 		--no-cache-dir 		--no-compile 		"pip==$PYTHON_PIP_VERSION" 		"setuptools==$PYTHON_SETUPTOOLS_VERSION" 	; 	rm -f get-pip.py; 		pip --version # buildkit
 
-CMD ["python3"]
+# curl and ca-certificates dependencies
+RUN apt-get update \
+    && apt-get install -y \
+        curl \
+        ca-certificates \
+    && rm -rf /var/lib/apt/lists/*
+
+# uv installer
+ADD https://astral.sh/uv/install.sh /uv-installer.sh
+RUN sh /uv-installer.sh && rm /uv-installer.sh
+ENV PATH="/root/.local/bin/:$PATH"
+
+# git and git-lfs dependencies
+RUN apt-get update \
+    && apt-get install -y \
+        git \
+        git-lfs \
+    && rm -rf /var/lib/apt/lists/*
+RUN git lfs install
+
+# GUI / Rendering dependencies
+RUN apt-get update \
+    && apt-get install -y \
+        libgtk2.0-dev \
+        libgl1 \
+        tk \
+    && rm -rf /var/lib/apt/lists/*
+
+WORKDIR /root

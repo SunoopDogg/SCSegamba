@@ -1,17 +1,22 @@
-name: scsegamba
-
 services:
-  python:
-    build: .
+  scsegamba:
+    build:
+      context: .
+    image: python3.10.12:slim-ubuntu20.04-uv
     container_name: scsegamba
     tty: true
     ipc: host
     environment:
-      - DISPLAY=${DISPLAY}
+      - DISPLAY=${DISPLAY:-host.docker.internal:0}
       - QT_X11_NO_MITSHM=1
     volumes:
       - .:/root/scsegamba
       - /tmp/.X11-unix:/tmp/.X11-unix
+
+  scsegamba-gpu:
+    extends:
+      service: scsegamba
+    container_name: scsegamba-gpu
     deploy:
       resources:
         reservations:
@@ -19,3 +24,5 @@ services:
             - driver: nvidia
               count: all
               capabilities: [gpu]
+    profiles:
+      - gpu
